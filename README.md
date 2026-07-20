@@ -1,114 +1,84 @@
-# studi-restaurant-symfony-lts-api
+🍽️ Studi Restaurant – Symfony LTS API
+This repository contains a backend API developed as part of the STUDI courses, using the latest Symfony LTS version.
 
-**This repository is a simple project use for STUDI courses written with the last version of Symfony.**
-
-```
+📄 License & Copyright
 /*
- * Copyright (C)- All Rights Reserved.
- * Unauthorized copying of this repository, via any medium is strictly prohibited.
- * Proprietary and confidential.
- * Written by Thomas David <thomas.david.ch@gmail.com>.
+
+Copyright (C) - All Rights Reserved.
+Unauthorized copying of this repository, via any medium is strictly prohibited.
+Proprietary and confidential.
+Written by Thomas David thomas.david.ch@gmail.com.
  */
-```
 
-## Documentation
 
-Before the development, **be sure to be comfortable with your current work environment**.
-Like to setup your IDE, install all necessary plugins, prepare your keyboard shortcuts, create your Bash aliases etc...
+📚 Documentation
+Before starting development, make sure your environment is properly configured:
 
-- [Awesome dotfiles](https://github.com/webpro/awesome-dotfiles)
-- [Lean and mean dev with PHPStorm](https://symfonycasts.com/screencast/phpstorm)
+IDE setup (PhpStorm recommended)
+Useful plugins and shortcuts
+Bash aliases and developer tools
 
-As soon as everything is ready, you can read some docs during the development.
-Take a look below !
+Helpful resources:
 
-- [Tools helping developers every day](https://www.youtube.com/watch?v=_OEDoPMvNY4)
-- [Symfony Fast Track](https://symfony.com/doc/6.2/the-fast-track/fr/index.html)
+https://github.com/webpro/awesome-dotfiles  
+https://symfonycasts.com/screencast/phpstorm  
+https://www.youtube.com/watch?v=_OEDoPMvNY4  
+https://symfony.com/doc/6.2/the-fast-track/fr/index.html
 
-## Installation instructions
 
-### Project requirements
+⚙️ Requirements
+Required tools:
 
-- [PHP >=7.2.5 or higher](http://php.net/manual/fr/install.php)
-- [SQL >=8.0](https://www.mysql.com/fr/downloads/)
-- [Symfony CLI](https://symfony.com/download)
-- [Composer](https://getcomposer.org/download)
-- [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
-- PHP extensions such as : Iconv, JSON, PCRE, Session, Tokenizer and the [usual Symfony application requirements][1].
+PHP >= 7.2.5  
+MySQL >= 8.0  
+Symfony CLI  
+Composer  
+Git
 
-```bash
-$ symfony check:requirements # To check minimal requirements for the project
-```
+Required PHP extensions:
 
-### View
+Iconv  
+JSON  
+PCRE  
+Session  
+Tokenizer
 
-![Symfony view](./studi-restaurant-view.png "Symfony configuration view")
+Check your setup:
+symfony check:requirements
 
-### Installation
+👀 Preview
+(Insert image: studi-restaurant-view.png)
 
-1 . **Register a GPG/SSH Key into your Gitlab/Github account** to push verified commits and registry images.
+🚀 Installation
 
-2 . Clone the current repository (SSH):
-```bash
-$ git clone 'git@github.com:GaetanRole/studi-restaurant-symfony-lts-api.git'
-```
+Clone the repository
 
-3 . Move in and create few `.env.{environment}.local` files, according to your environments with your default configuration.
-**.local files are not committed to the shared repository.**
+git clone https://github.com/thomasdavidch-afk/QuaiAntiqueRestaurantBack.gitcd QuaiAntiqueRestaurantBack  
 
-```bash
-$ cp .env .env.local   # Create .env.$APP_ENV.local files. Complete them with your configuration.
-```
+Configure environment
 
-> `.env` equals to the last `.env.dist` file before [november 2018][2].
+cp .env .env.local  
+Update your database configuration inside .env.local.
 
-4 . Set your DATABASE_URL in `.env.{environment}.local` files and run these commands :
+Install dependencies and setup database
 
-```bash
-$ composer install        # Install all PHP packages
-$ php bin/console d:d:c   # Create your DATABASE related to your .env.local configuration
-$ php bin/console d:m:m   # Run migrations to setup your DATABASE according to your entities
-```
+composer installphp bin/console doctrine:database:createphp bin/console doctrine:migrations:migrate  
 
-## Workflow
+🔄 Workflow
 
-Each course is related to one branch. 
-If you want to know what modification was made, you have to compare the previous branch with the new one.
+Each course is associated with a specific branch  
+The main branch always contains the most up-to-date version
 
-The ``[main]`` branch is always up to date with all courses.
 
-## Usage
+▶️ Usage
+Start the local server:
+symfony server:start  
+Useful commands:
+bin/console debug:routerbin/console debug:container  
 
-```bash
-$ symfony server:start    # Use this command to start a local server.
-```
+🚀 Deployment
+Deploy using Platform.sh:
+symfony project:set-remote [PROJECT_ID]symfony cloud:environment:push  
 
-To see all available routes, services... :
-
-```bash
-$ bin/console debug:router
-$ bin/console debug:container
-$ bin/console debug:...
-```
-
-## Continuous deployment
-
-This project can be easily hosted on Platform.SH :
-
-<p align="center">
-<a href="https://auth.api.platform.sh/"><img src="https://platform.sh/images/deploy/lg-blue.svg" alt="Deploy on Platform.sh" width="180px" /></a>
-</p>
-
-```bash
-$ symfony project:set-remote [PROJECT_ID]
-$ symfony cloud:environment:push
-```
-
-## Contributing
-
-Zero contribution is allowed. This software is private for STUDI and STUDI students.
-
-[1]: https://symfony.com/doc/current/reference/requirements.html
-[2]: https://symfony.com/doc/current/configuration.html#the-env-file-environment-variables
-
-[⬆️ Back to top](#studi-restaurant-symfony-lts-api)
+❌ Contributing
+This is a private educational project. Contributions are not open.
