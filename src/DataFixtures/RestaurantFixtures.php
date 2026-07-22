@@ -8,8 +8,9 @@ use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Exception;
 use Faker;
+use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 
-class RestaurantFixtures extends Fixture
+class RestaurantFixtures extends Fixture implements DependentFixtureInterface
 {
     public const RESTAURANT_REFERENCE = 'restaurant-';
     public const RESTAURANT_NB_TUPLES = 10;
@@ -25,13 +26,17 @@ class RestaurantFixtures extends Fixture
                 ->setDescription($faker->text())
                 ->setAmOpeningTime([])
                 ->setPmOpeningTime([])
-                ->setMaxGuest(random_int(10, 50))
-                ->setCreatedAt(new DateTimeImmutable());
+                ->setMaxGuest(random_int(10, 50));
 
             $manager->persist($restaurant);
             $this->addReference(self::RESTAURANT_REFERENCE . $i, $restaurant);
         }
 
         $manager->flush();
+    }
+
+    public function getDependencies()
+    {
+        return [UserFixtures::class];
     }
 }

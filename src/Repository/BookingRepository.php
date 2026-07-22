@@ -21,6 +21,28 @@ class BookingRepository extends ServiceEntityRepository
         parent::__construct($registry, Booking::class);
     }
 
+    /**
+     * Retourne toutes les réservations pour une date donnée (entre 00:00:00 et 23:59:59)
+     * Utile pour vérifier la limite de 50 couverts par service.
+     * 
+     * @param string $dateString Date au format 'YYYY-MM-DD'
+     * @return Booking[]
+     */
+    public function findByDate(string $dateString): array
+    {
+        // On crée des objets DateTime pour le début et la fin de la journée
+        $start = new \DateTime($dateString . ' 00:00:00');
+        $end = new \DateTime($dateString . ' 23:59:59');
+
+        return $this->createQueryBuilder('b')
+            ->andWhere('b.bookingAt >= :start')
+            ->andWhere('b.bookingAt <= :end')
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->getQuery()
+            ->getResult();
+    }
+
 //    /**
 //     * @return Booking[] Returns an array of Booking objects
 //     */

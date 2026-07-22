@@ -29,24 +29,45 @@ final class SmokeTest extends WebTestCase
 
     public function testLoginRouteCanConnectAValidUser(): void
     {
+    $client = self::createClient();
+
+    // Inscription
+    $client->jsonRequest('POST', '/api/registration', [
+        'firstName' => 'Alain',
+        'lastName' => 'David',
+        'guestNumber' => 1,
+        'allergy' => 'aucune',
+        'email' => 'alain.david.rg@gmail.com',
+        'password' => 'password',
+    ]);
+
+    self::assertResponseStatusCodeSame(201); // ou 200 selon ton contrôleur
+
+    // Connexion
+    $client->jsonRequest('POST', '/api/login', [
+        'email' => 'alain.david.rg@gmail.com',
+        'password' => 'password',
+    ]);
+
+    self::assertResponseIsSuccessful();
+
+    $content = $client->getResponse()->getContent();
+
+    self::assertStringContainsString('apiToken', $content);
+    self::assertStringContainsString('roles', $content);
+    }
+
+    public function testLoginRouteCannotConnectAnInvalidUser(): void
+    {
         $client = self::createClient();
-        $client->followRedirects(false);
 
-        $client->request('POST', '/api/login', [], [], [
-            'CONTENT_TYPE' => 'application/json',
-        ], json_encode([
-            'username' => 'pierre.dupont@studi.exemple',
-            'password' => 'pierre2023',
-        ], JSON_THROW_ON_ERROR));
+        $client->jsonRequest('POST', '/api/login', [
+            'email' => 'invalid@example.com',
+            'password' => 'invalidpassword',
+        ]);
 
-        $statusCode = $client->getResponse()->getStatusCode();
-        $content = $client->getResponse()->getContent();
-
-        $this->assertEquals(200, $statusCode);
-        $this->assertStringContainsString('user', $content);
-        $this->assertStringContainsString('apiToken', $content);
-        $this->assertStringContainsString('roles', $content);
-
-        self::assertResponseIsSuccessful();
+        self::assertResponseStatusCodeSame(401);
     }
 }
+
+
