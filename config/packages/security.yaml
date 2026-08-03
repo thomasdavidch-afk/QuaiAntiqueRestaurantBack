@@ -33,10 +33,17 @@ security:
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
     access_control:
-         - { path: ^/api/registration, roles: PUBLIC_ACCESS }
-         - { path: ^/api/login, roles: PUBLIC_ACCESS }
-         - { path: ^/api/doc, roles: PUBLIC_ACCESS }
-         - { path: ^/api, roles: ROLE_USER }
+        - { path: ^/api/registration, roles: PUBLIC_ACCESS }
+        - { path: ^/api/login, roles: PUBLIC_ACCESS }
+        - { path: ^/api/doc, roles: PUBLIC_ACCESS }
+
+        # --- Ajout des accès publics pour la carte et les menus ---
+        - { path: ^/api/menus, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/categories, roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/plats, roles: PUBLIC_ACCESS, methods: [GET] }
+
+        # --- Toutes les autres routes API nécessitent d'être connecté ---
+        - { path: ^/api, roles: ROLE_USER }
 
 when@test:
     security:

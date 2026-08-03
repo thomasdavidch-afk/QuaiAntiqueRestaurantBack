@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity(repositoryClass: MenuRepository::class)]
@@ -17,21 +18,27 @@ class Menu
     #[ORM\Column]
     private ?int $id = null;
 
+    #[Groups(['menu:read'])]
     #[ORM\Column(length: 36, unique: true)]
     private ?string $uuid = null;
 
+    #[Groups(['menu:read'])]
     #[ORM\Column(length: 64)]
     private ?string $title = null;
 
-    #[ORM\Column(type: Types::TEXT)]
+    #[Groups(['menu:read'])]
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $description = null;
 
+    #[Groups(['menu:read'])]
     #[ORM\Column(type: Types::INTEGER)]
     private int $price = 0;
 
+    #[Groups(['menu:read'])]
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $createdAt = null;
 
+    #[Groups(['menu:read'])]
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $updatedAt = null;
 
@@ -39,11 +46,13 @@ class Menu
     #[ORM\JoinColumn(nullable: false)]
     private ?Restaurant $restaurant = null;
 
+    #[Groups(['menu:read'])]
     #[ORM\ManyToMany(targetEntity: Category::class, inversedBy: 'menus')]
     #[ORM\JoinTable(name: 'menu_category')]
     private Collection $categories;
 
-    // ✅ AJOUT RELATION FOOD
+    // ✅ Collection de plats rattachés au menu (exposée aux clients via le groupe menu:read)
+    #[Groups(['menu:read'])]
     #[ORM\OneToMany(mappedBy: 'menu', targetEntity: Food::class, orphanRemoval: true)]
     private Collection $foods;
 
@@ -52,7 +61,7 @@ class Menu
         $this->uuid = Uuid::v4()->toRfc4122();
         $this->createdAt = new \DateTimeImmutable();
         $this->categories = new ArrayCollection();
-        $this->foods = new ArrayCollection(); // ✅ IMPORTANT
+        $this->foods = new ArrayCollection();
     }
 
     // =====================
@@ -91,7 +100,7 @@ class Menu
         return $this->description;
     }
 
-    public function setDescription(string $description): static
+    public function setDescription(?string $description): static
     {
         $this->description = $description;
         return $this;
@@ -142,9 +151,12 @@ class Menu
     }
 
     // =====================
-    // MANY TO MANY
+    // CATEGORIES (MANY TO MANY)
     // =====================
 
+    /**
+     * @return Collection<int, Category>
+     */
     public function getCategories(): Collection
     {
         return $this->categories;
@@ -170,9 +182,12 @@ class Menu
     }
 
     // =====================
-    // ONE TO MANY (FOOD)
+    // FOODS (ONE TO MANY)
     // =====================
 
+    /**
+     * @return Collection<int, Food>
+     */
     public function getFoods(): Collection
     {
         return $this->foods;

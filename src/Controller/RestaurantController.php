@@ -25,6 +25,45 @@ class RestaurantController extends AbstractController
         private UrlGeneratorInterface $urlGenerator,
     ) {}
 
+    #[Route('/config', name: 'config_get', methods: ['GET'])]
+    /** @OA\Get(
+     *     path="/api/restaurant/config",
+     *     summary="Obtenir la configuration par défaut du restaurant",
+     *     @OA\Response(
+     *         response=200,
+     *         description="Détails de configuration du restaurant"
+     *     )
+     * )
+    */
+    public function getConfig(): JsonResponse
+    {
+        $restaurant = $this->repository->findOneBy([]);
+
+        if (!$restaurant) {
+            return new JsonResponse([
+                'id' => null,
+                'maxConvives' => 0,
+                'horaireMidi' => '',
+                'horaireSoir' => ''
+            ], Response::HTTP_OK);
+        }
+
+        $am = is_array($restaurant->getAmOpeningTime()) 
+            ? implode(' - ', $restaurant->getAmOpeningTime()) 
+            : $restaurant->getAmOpeningTime();
+
+        $pm = is_array($restaurant->getPmOpeningTime()) 
+            ? implode(' - ', $restaurant->getPmOpeningTime()) 
+            : $restaurant->getPmOpeningTime();
+
+        return new JsonResponse([
+            'id' => $restaurant->getId(),
+            'maxConvives' => $restaurant->getMaxGuest(),
+            'horaireMidi' => $am ?? '',
+            'horaireSoir' => $pm ?? ''
+        ], Response::HTTP_OK);
+    }
+
     #[Route(name: 'new', methods: ['POST'])]
     /** @OA\Post(
      *     path="/api/restaurant",
@@ -194,20 +233,30 @@ class RestaurantController extends AbstractController
             return new JsonResponse(null, Response::HTTP_NOT_FOUND);
         }
 
-        if ($restaurant->getOwner() !== $user) {
+        // On autorise la modification si l'utilisateur est le propriétaire OU s'il a le rôle ADMIN
+        if ($restaurant->getOwner() !== $user && !$this->isGranted('ROLE_ADMIN')) {
             return new JsonResponse(['error' => 'Forbidden'], Response::HTTP_FORBIDDEN);
         }
 
-        $this->serializer->deserialize(
-            $request->getContent(),
-            Restaurant::class,
-            'json',
-            [AbstractNormalizer::OBJECT_TO_POPULATE => $restaurant]
-        );
+        $data = json_decode($request->getContent(), true);
 
-        $this->manager->flush();
+        if ($data) {
+            if (isset($data['maxGuest'])) {
+                $restaurant->setMaxGuest((int) $data['maxGuest']);
+            }
+            if (isset($data['amOpeningTime'])) {
+                $restaurant->setAmOpeningTime(is_array($data['amOpeningTime']) ? $data['amOpeningTime'] : [$data['amOpeningTime']]);
+            }
+            if (isset($data['pmOpeningTime'])) {
+                $restaurant->setPmOpeningTime(is_array($data['pmOpeningTime']) ? $data['pmOpeningTime'] : [$data['pmOpeningTime']]);
+            }
 
-        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+            $this->manager->flush();
+
+            return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+        }
+
+        return new JsonResponse(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
     }
 
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
@@ -247,7 +296,7 @@ class RestaurantController extends AbstractController
             return new JsonResponse(null, Response::HTTP_NOT_FOUND);
         }
 
-        if ($restaurant->getOwner() !== $user) {
+        if ($restaurant->getOwner() !== $user && !$this->isGranted('ROLE_ADMIN')) {
             return new JsonResponse(['error' => 'Forbidden'], Response::HTTP_FORBIDDEN);
         }
 
