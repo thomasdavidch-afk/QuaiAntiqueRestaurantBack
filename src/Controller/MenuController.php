@@ -20,42 +20,9 @@ use Symfony\Component\Routing\Annotation\Route;
 class MenuController extends AbstractController
 {
     /**
-     * Route publique : Permet aux clients et visiteurs de consulter la liste des menus avec leurs plats.
+     * Route publique : Consulter la liste des menus
      */
     #[Route('/menus', name: 'get_menus', methods: ['GET'])]
-    #[OA\Get(
-        path: '/api/menus',
-        summary: 'Obtenir la liste de tous les menus avec leurs plats',
-        description: 'Retourne la liste complète des menus avec les détails de tous les plats qui les composent.'
-    )]
-    #[OA\Response(
-        response: 200,
-        description: 'Liste des menus avec leurs plats récupérée avec succès',
-        content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(
-                properties: [
-                    new OA\Property(property: 'uuid', type: 'string', example: 'd3b07384-d113-43a6-a00e-1f3d32832560'),
-                    new OA\Property(property: 'title', type: 'string', example: 'Menu Gourmand'),
-                    new OA\Property(property: 'description', type: 'string', example: 'Entrée, plat et dessert au choix'),
-                    new OA\Property(property: 'price', type: 'integer', example: 2500, description: 'Prix en centimes (25.00 €)'),
-                    new OA\Property(
-                        property: 'foods',
-                        type: 'array',
-                        description: 'Liste des plats composant ce menu',
-                        items: new OA\Items(
-                            properties: [
-                                new OA\Property(property: 'uuid', type: 'string', example: 'f8c3de3d-1fea-4d7c-a8b0-29f63c4c34a1'),
-                                new OA\Property(property: 'title', type: 'string', example: 'Salade Landaise'),
-                                new OA\Property(property: 'description', type: 'string', example: 'Foie gras, gésiers, salade verte'),
-                                new OA\Property(property: 'price', type: 'integer', example: 1200)
-                            ]
-                        )
-                    )
-                ]
-            )
-        )
-    )]
     public function getMenus(MenuRepository $menuRepository): JsonResponse
     {
         $menus = $menuRepository->findAll();
@@ -64,70 +31,9 @@ class MenuController extends AbstractController
     }
 
     /**
-     * Route Admin : Créer un nouveau menu en y rattachant une liste de plats via leurs UUIDs.
+     * Route Admin : Créer un nouveau menu
      */
     #[Route('/admin/menus', name: 'create_menu', methods: ['POST'])]
-    #[OA\Post(
-        path: '/api/admin/menus',
-        summary: 'Créer un nouveau menu en sélectionnant des plats (Admin)',
-        description: 'Permet à un administrateur de créer un menu et d\'y associer des plats existants via leurs UUIDs.'
-    )]
-    #[OA\RequestBody(
-        required: true,
-        content: new OA\JsonContent(
-            required: ['title', 'price', 'restaurantUuid'],
-            properties: [
-                new OA\Property(property: 'title', type: 'string', example: 'Menu du Marché'),
-                new OA\Property(property: 'description', type: 'string', example: 'Plats frais préparés du jour'),
-                new OA\Property(property: 'price', type: 'integer', example: 2200, description: 'Prix en centimes (22.00 €)'),
-                new OA\Property(property: 'restaurantUuid', type: 'string', example: 'a1b2c3d4-e5f6-7890-1234-56789abcdef0'),
-                new OA\Property(
-                    property: 'foodUuids',
-                    type: 'array',
-                    description: 'Tableau des UUIDs des plats sélectionnés pour constituer ce menu',
-                    items: new OA\Items(type: 'string'),
-                    example: ['f8c3de3d-1fea-4d7c-a8b0-29f63c4c34a1', 'e931ab56-82cd-4110-9b12-9876543210ab']
-                ),
-                new OA\Property(
-                    property: 'categoryUuids',
-                    type: 'array',
-                    description: 'Tableau des UUIDs des catégories éventuellement associées',
-                    items: new OA\Items(type: 'string'),
-                    example: ['018f3a5b-9c7d-7123-8456-abcdef123456']
-                )
-            ]
-        )
-    )]
-    #[OA\Response(
-        response: 201,
-        description: 'Menu créé avec succès et plats associés',
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: 'message', type: 'string', example: 'Menu créé avec succès !'),
-                new OA\Property(property: 'uuid', type: 'string', example: 'd3b07384-d113-43a6-a00e-1f3d32832560'),
-                new OA\Property(property: 'title', type: 'string', example: 'Menu du Marché'),
-                new OA\Property(property: 'price', type: 'integer', example: 2200)
-            ]
-        )
-    )]
-    #[OA\Response(
-        response: 400,
-        description: 'Données invalides ou champs obligatoires manquants',
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: 'error', type: 'string', example: 'Les champs title, price et restaurantUuid sont obligatoires.')
-            ]
-        )
-    )]
-    #[OA\Response(
-        response: 404,
-        description: 'Restaurant introuvable',
-        content: new OA\JsonContent(
-            properties: [
-                new OA\Property(property: 'error', type: 'string', example: 'Restaurant non trouvé.')
-            ]
-        )
-    )]
     public function createMenu(
         Request $request,
         EntityManagerInterface $em,
@@ -143,20 +49,17 @@ class MenuController extends AbstractController
             ], Response::HTTP_BAD_REQUEST);
         }
 
-        // 1. Recherche du Restaurant
         $restaurant = $restaurantRepository->findOneBy(['uuid' => $data['restaurantUuid']]);
         if (!$restaurant) {
             return $this->json(['error' => 'Restaurant non trouvé.'], Response::HTTP_NOT_FOUND);
         }
 
-        // 2. Instanciation du Menu
         $menu = new Menu();
         $menu->setTitle($data['title']);
         $menu->setDescription($data['description'] ?? '');
         $menu->setPrice((int) $data['price']);
         $menu->setRestaurant($restaurant);
 
-        // 3. Association des Plats
         if (!empty($data['foodUuids']) && is_array($data['foodUuids'])) {
             foreach ($data['foodUuids'] as $foodUuid) {
                 $food = $foodRepository->findOneBy(['uuid' => $foodUuid]);
@@ -166,7 +69,6 @@ class MenuController extends AbstractController
             }
         }
 
-        // 4. Association des Catégories
         if (!empty($data['categoryUuids']) && is_array($data['categoryUuids'])) {
             foreach ($data['categoryUuids'] as $categoryUuid) {
                 $category = $categoryRepository->findOneBy(['uuid' => $categoryUuid]);
@@ -176,7 +78,6 @@ class MenuController extends AbstractController
             }
         }
 
-        // Persistance
         $em->persist($menu);
         $em->flush();
 
@@ -186,5 +87,78 @@ class MenuController extends AbstractController
             'title' => $menu->getTitle(),
             'price' => $menu->getPrice()
         ], Response::HTTP_CREATED);
+    }
+
+    /**
+     * Route Admin : Modifier un menu existant via son UUID
+     */
+    #[Route('/admin/menus/{uuid}', name: 'update_menu', methods: ['PUT'])]
+    public function updateMenu(
+        string $uuid,
+        Request $request,
+        EntityManagerInterface $em,
+        MenuRepository $menuRepository,
+        FoodRepository $foodRepository
+    ): JsonResponse {
+        $menu = $menuRepository->findOneBy(['uuid' => $uuid]);
+
+        if (!$menu) {
+            return $this->json(['error' => 'Menu non trouvé.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        if (isset($data['title'])) {
+            $menu->setTitle($data['title']);
+        }
+        if (isset($data['price'])) {
+            $menu->setPrice((int) $data['price']);
+        }
+        if (isset($data['description'])) {
+            $menu->setDescription($data['description']);
+        }
+
+        // Réinitialiser et associer les nouveaux plats
+        if (isset($data['foodUuids']) && is_array($data['foodUuids'])) {
+            // Vider les plats actuels
+            foreach ($menu->getFoods() as $existingFood) {
+                $menu->removeFood($existingFood);
+            }
+            // Ajouter les nouveaux plats
+            foreach ($data['foodUuids'] as $foodUuid) {
+                $food = $foodRepository->findOneBy(['uuid' => $foodUuid]);
+                if ($food) {
+                    $menu->addFood($food);
+                }
+            }
+        }
+
+        $em->flush();
+
+        return $this->json([
+            'message' => 'Menu mis à jour avec succès !',
+            'uuid' => $menu->getUuid()
+        ], Response::HTTP_OK);
+    }
+
+    /**
+     * Route Admin : Supprimer un menu via son UUID
+     */
+    #[Route('/admin/menus/{uuid}', name: 'delete_menu', methods: ['DELETE'])]
+    public function deleteMenu(
+        string $uuid,
+        EntityManagerInterface $em,
+        MenuRepository $menuRepository
+    ): JsonResponse {
+        $menu = $menuRepository->findOneBy(['uuid' => $uuid]);
+
+        if (!$menu) {
+            return $this->json(['error' => 'Menu non trouvé.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $em->remove($menu);
+        $em->flush();
+
+        return $this->json(null, Response::HTTP_NO_CONTENT);
     }
 }

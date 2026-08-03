@@ -132,20 +132,25 @@ class CardController extends AbstractController
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
-        if (empty($data['title']) || empty($data['price']) || empty($data['categoryUuid'])) {
+        // On récupère le UUID de la catégorie peu importe la clé utilisée par le JS
+        $categoryUuid = $data['categoryUuid'] ?? $data['category_id'] ?? $data['category'] ?? null;
+        $title = $data['title'] ?? null;
+        $price = $data['price'] ?? null;
+
+        if (empty($title) || empty($price) || empty($categoryUuid)) {
             return $this->json(['message' => 'Le titre, le prix et la catégorie sont obligatoires.'], 400);
         }
 
-        $category = $categoryRepository->findOneBy(['uuid' => $data['categoryUuid']]);
+        $category = $categoryRepository->findOneBy(['uuid' => $categoryUuid]);
         if (!$category) {
             return $this->json(['message' => 'La catégorie spécifiée n\'existe pas.'], 404);
         }
 
         $food = new Food();
         $food->setUuid(Uuid::v4()->toRfc4122());
-        $food->setTitle($data['title']);
+        $food->setTitle($title);
         $food->setDescription($data['description'] ?? null);
-        $food->setPrice((int)$data['price']);
+        $food->setPrice((int)$price);
         $food->setCategory($category); 
 
         $em->persist($food);
