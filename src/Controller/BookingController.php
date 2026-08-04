@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-use OpenApi\Annotations as OA; // <-- Ne pas oublier l'import OpenApi
+use OpenApi\Annotations as OA;
 
 #[Route('/api/booking')]
 #[IsGranted('ROLE_USER')]
@@ -65,15 +65,15 @@ class BookingController extends AbstractController
         }
 
         $bookingDate = new \DateTime($dateString . ' ' . $timeString);
-        
+
         $isMidi = (int) $bookingDate->format('H') < 16;
         $reservationsDuJour = $bookingRepo->findByDate($dateString);
-        
+
         $couvertsDejaReserves = 0;
         foreach ($reservationsDuJour as $resa) {
             $resaHeure = (int) $resa->getBookingAt()->format('H');
             $resaIsMidi = $resaHeure < 16;
-            
+
             if ($isMidi === $resaIsMidi) {
                 $couvertsDejaReserves += $resa->getGuestNumber();
             }
@@ -104,21 +104,17 @@ class BookingController extends AbstractController
     /**
      * @OA\Get(
      *     path="/api/booking",
-     *     summary="Voir la liste des réservations de l'utilisateur connecté",
+     *     summary="Voir la liste des réservations (Filtre par date facultatif pour les admins, réservations perso pour les clients)",
+     *     @OA\Parameter(
+     *         name="date",
+     *         in="query",
+     *         required=false,
+     *         description="Filtre par date pour les administrateurs (format: YYYY-MM-DD). Si non renseigné, renvoie toutes les réservations à venir.",
+     *         @OA\Schema(type="string", example="2026-07-25")
+     *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Liste des réservations",
-     *         @OA\JsonContent(
-     *             type="array",
-     *             @OA\Items(
-     *                 type="object",
-     *                 @OA\Property(property="uuid", type="string", example="123e4567-e89b-12d3-a456-426614174000"),
-     *                 @OA\Property(property="date", type="string", format="date", example="2026-07-25"),
-     *                 @OA\Property(property="time", type="string", format="time", example="19:30"),
-     *                 @OA\Property(property="guestNumber", type="integer", example=4),
-     *                 @OA\Property(property="allergy", type="string", example="Arachides")
-     *             )
-     *         )
+     *         description="Liste des réservations"
      *     ),
      *     @OA\Response(
      *         response=401,
@@ -127,19 +123,46 @@ class BookingController extends AbstractController
      * )
      */
     #[Route('', name: 'api_booking_list', methods: ['GET'])]
-    public function list(BookingRepository $bookingRepo): JsonResponse
+    public function list(Request $request, BookingRepository $bookingRepo): JsonResponse
     {
         $user = $this->getUser();
-        $bookings = $bookingRepo->findBy(['client' => $user], ['bookingAt' => 'DESC']);
+        $isAdmin = $this->isGranted('ROLE_ADMIN') || $this->isGranted('ROLE_RESTAURATEUR');
+
+        if ($isAdmin) {
+            $dateString = $request->query->get('date');
+
+            if ($dateString) {
+                // S'il y a une date explicite passée dans l'URL -> filtrer pour ce jour-là
+                $bookings = $bookingRepo->findByDate($dateString);
+            } else {
+                // Sinon -> TOUTES les réservations à venir de TOUS les clients (à partir d'aujourd'hui 00:00:00)
+                $today = new \DateTime('today');
+                $bookings = $bookingRepo->createQueryBuilder('b')
+                    ->where('b.bookingAt >= :today')
+                    ->setParameter('today', $today)
+                    ->orderBy('b.bookingAt', 'ASC')
+                    ->getQuery()
+                    ->getResult();
+            }
+        } else {
+            // Si client simple : uniquement ses réservations personnelles
+            $bookings = $bookingRepo->findBy(['client' => $user], ['bookingAt' => 'DESC']);
+        }
 
         $data = [];
         foreach ($bookings as $booking) {
+            $client = $booking->getClient();
             $data[] = [
                 'uuid' => $booking->getUuid(),
                 'date' => $booking->getBookingAt()->format('Y-m-d'),
                 'time' => $booking->getBookingAt()->format('H:i'),
                 'guestNumber' => $booking->getGuestNumber(),
-                'allergy' => $booking->getAllergy()
+                'allergy' => $booking->getAllergy(),
+                'user' => $client ? [
+                    'firstName' => method_exists($client, 'getFirstName') ? $client->getFirstName() : null,
+                    'lastName' => method_exists($client, 'getLastName') ? $client->getLastName() : null,
+                    'email' => $client->getUserIdentifier() ?? (method_exists($client, 'getEmail') ? $client->getEmail() : null)
+                ] : null
             ];
         }
 
@@ -182,15 +205,21 @@ class BookingController extends AbstractController
         BookingRepository $bookingRepo, 
         EntityManagerInterface $em
     ): JsonResponse {
-        $booking = $bookingRepo->findOneBy(['uuid' => $uuid, 'client' => $this->getUser()]);
+        $isAdmin = $this->isGranted('ROLE_ADMIN') || $this->isGranted('ROLE_RESTAURATEUR');
+
+        if ($isAdmin) {
+            $booking = $bookingRepo->findOneBy(['uuid' => $uuid]);
+        } else {
+            $booking = $bookingRepo->findOneBy(['uuid' => $uuid, 'client' => $this->getUser()]);
+        }
 
         if (!$booking) {
-            return $this->json(['message' => 'Réservation introuvable'], 404);
+            return $this->json(['message' => 'Réservation introuvable ou non autorisée'], 404);
         }
 
         $data = json_decode($request->getContent(), true);
 
-        if (isset($data['guestNumber'])) $booking->setGuestNumber($data['guestNumber']);
+        if (isset($data['guestNumber'])) $booking->setGuestNumber((int) $data['guestNumber']);
         if (isset($data['allergy'])) $booking->setAllergy($data['allergy']);
         $booking->setUpdatedAt(new \DateTimeImmutable());
 
@@ -226,7 +255,13 @@ class BookingController extends AbstractController
         BookingRepository $bookingRepo, 
         EntityManagerInterface $em
     ): JsonResponse {
-        $booking = $bookingRepo->findOneBy(['uuid' => $uuid, 'client' => $this->getUser()]);
+        $isAdmin = $this->isGranted('ROLE_ADMIN') || $this->isGranted('ROLE_RESTAURATEUR');
+
+        if ($isAdmin) {
+            $booking = $bookingRepo->findOneBy(['uuid' => $uuid]);
+        } else {
+            $booking = $bookingRepo->findOneBy(['uuid' => $uuid, 'client' => $this->getUser()]);
+        }
 
         if (!$booking) {
             return $this->json(['message' => 'Réservation introuvable ou non autorisée'], 404);

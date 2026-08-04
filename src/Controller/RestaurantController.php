@@ -42,6 +42,7 @@ class RestaurantController extends AbstractController
         if (!$restaurant) {
             return new JsonResponse([
                 'id' => null,
+                'uuid' => null,
                 'maxConvives' => 0,
                 'horaireMidi' => '',
                 'horaireSoir' => ''
@@ -58,6 +59,7 @@ class RestaurantController extends AbstractController
 
         return new JsonResponse([
             'id' => $restaurant->getId(),
+            'uuid' => $restaurant->getUuid(),
             'maxConvives' => $restaurant->getMaxGuest(),
             'horaireMidi' => $am ?? '',
             'horaireSoir' => $pm ?? ''

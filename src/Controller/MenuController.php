@@ -43,15 +43,31 @@ class MenuController extends AbstractController
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
-        if (!$data || !isset($data['title'], $data['price'], $data['restaurantUuid'])) {
+        // Validation des champs basiques
+        if (!$data || !isset($data['title'], $data['price'])) {
             return $this->json([
-                'error' => 'Les champs title, price et restaurantUuid sont obligatoires.'
+                'error' => 'Les champs title et price sont obligatoires.'
             ], Response::HTTP_BAD_REQUEST);
         }
 
-        $restaurant = $restaurantRepository->findOneBy(['uuid' => $data['restaurantUuid']]);
+        // 1. Récupérer l'utilisateur connecté
+        /** @var \App\Entity\User $user */
+        $user = $this->getUser();
+
+        // 2. Récupérer son restaurant lié (via $user->getRestaurant() ou via repository)
+        $restaurant = $user ? $user->getRestaurant() : null;
+
+        // 3. Fallback : Si pas de relation directe sur le User, prendre le premier restaurant en BDD
         if (!$restaurant) {
-            return $this->json(['error' => 'Restaurant non trouvé.'], Response::HTTP_NOT_FOUND);
+            if (!empty($data['restaurantUuid'])) {
+                $restaurant = $restaurantRepository->findOneBy(['uuid' => $data['restaurantUuid']]);
+            } else {
+                $restaurant = $restaurantRepository->findOneBy([]);
+            }
+        }
+
+        if (!$restaurant) {
+            return $this->json(['error' => 'Aucun restaurant associé à cet utilisateur ou trouvé en BDD.'], Response::HTTP_NOT_FOUND);
         }
 
         $menu = new Menu();
