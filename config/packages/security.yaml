@@ -42,6 +42,12 @@ security:
         - { path: ^/api/categories, roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api/plats, roles: PUBLIC_ACCESS, methods: [GET] }
 
+        # --- Ajout de l'accès public pour les horaires (configuration du restaurant) ---
+        - { path: ^/api/restaurant/config, roles: PUBLIC_ACCESS, methods: [GET] }
+
+        # --- Ajout de l'accès public pour les images ---
+        - { path: ^/api/pictures, roles: PUBLIC_ACCESS, methods: [GET] }
+
         # --- Toutes les autres routes API nécessitent d'être connecté ---
         - { path: ^/api, roles: ROLE_USER }
 
